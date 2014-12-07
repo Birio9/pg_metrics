@@ -1,0 +1,55 @@
+#!/usr/bin/env ruby
+begin
+  require 'pg_metrics'
+rescue LoadError
+  require 'rubygems'
+  require 'pg_metrics'
+end
+
+require 'sensu-plugin/metric/cli'
+require 'socket'
+
+module PgMetrics
+  class Sensu < Sensu::Plugin::Metric::CLI::Graphite
+
+    APPNAME = "pg_metrics_sensu"
+
+    option :conn,
+    description: "PostgreSQL connection string",
+    short: '-c STRING',
+    long: '--connection STRING',
+    default: ''
+
+    option :dbname,
+    description: "Comma-separated list of dbnames",
+    short: '-d DB',
+    long: '--dbname DB',
+    default: nil
+
+    option :scheme,
+    description: "Metric naming scheme, text to prepend to $metric",
+    long: "--scheme SCHEME",
+    default: "#{Socket.gethostname}.postgresql"
+
+    option :exclude,
+    description: "Regexp to filter out uninteresting database objects",
+    short: "-e REGEXP",
+    long: "--exclude REGEXP",
+    default: nil
+
+    def run
+      regexp = config[:exclude] ? Regexp.new(config[:exclude]) : nil
+
+      metrics = if config[:dbname]
+                  Metrics::fetch_database_metrics(APPNAME, config[:conn], config[:dbname], regexp)
+                else
+                  Metrics::fetch_instance_metrics(APPNAME, config[:conn], regexp)
+                end
+
+      metrics.map! { |m| [([config[:scheme]] + m[0]).join("."), m[1], m[2]] }
+      metrics.each { |metric| output(*metric) }
+      ok
+    end
+
+  end
+end

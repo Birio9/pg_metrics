@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+begin
+  require 'pg_metrics'
+rescue LoadError
+  require 'rubygems'
+  require 'pg_metrics'
+end
+
+begin
+  exit PgMetrics::Statsd::main(ARGV)
+rescue => e
+  STDERR.puts e.message
+  STDERR.puts e.backtrace
+end
