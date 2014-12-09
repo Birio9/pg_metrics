@@ -34,12 +34,7 @@ module PgMetrics
 
     def self.filter_metrics(metrics, regexp = nil)
       metrics.reject! { |m| m[1].nil? }
-
-      if regexp
-        filter = Regexp.new(options[:filter])
-      end
       metrics.reject! { |m| m[0].any? { |k| k =~ regexp  } } if regexp
-
       metrics
     end
 
