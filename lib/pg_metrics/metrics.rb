@@ -28,7 +28,8 @@ module PgMetrics
 
     def self.make_conn(conn_str, app_name)
       conn = PG::Connection.new(conn_str)
-      conn.exec(%(SET application_name = "#{app_name}"))
+      server_version = conn.parameter_status("server_version")
+      conn.exec(%(SET application_name = "#{app_name}")) if Gem::Version.new(server_version) >= Gem::Version.new("9.0")
       conn
     end
 
