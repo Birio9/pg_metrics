@@ -7,12 +7,13 @@ Gem::Specification.new do |spec|
   spec.name = "pg_metrics"
   spec.version = PgMetrics::VERSION
   spec.licenses = %w(MIT)
-  spec.date = "2014-12-07"
+  spec.date = "2014-12-09"
   spec.summary = "pgrepmon"
   spec.description = "PostgreSQL Metrics"
   spec.authors = ["Michael Glaesemann"]
   spec.email = ["michael.glaesemann@meetme.com"]
   spec.files = FileList["{bin,lib,test}/**/*.*",
+                        "CHANGELOG.markdown",
                         "DEV.markdown",
                         "Gemfile",
                         "Gemfile.lock",
