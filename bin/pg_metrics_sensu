@@ -28,6 +28,7 @@ module PgMetrics
 
     option :scheme,
     description: "Metric naming scheme, text to prepend to $metric",
+    short: "-s SCHEME",
     long: "--scheme SCHEME",
     default: "#{Socket.gethostname}.postgresql"
 

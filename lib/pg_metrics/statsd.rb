@@ -53,7 +53,7 @@ module PgMetrics
         opts.on("-c", "--connection CONN", "PostgreSQL connection string") { |v| options[:conn] = v }
         opts.on("-d", "--dbname DBNAME", "PostgreSQL database name for database metrics") { |v| options[:dbname] = v }
         opts.on("-e", "--exclude REGEXP", "Exclude objects matching given regexp") { |v| options[:exclude] = ::Regexp.new(v) }
-        opts.on("--scheme SCHEME", "Metric namespace") { |v| options[:scheme] = v }
+        opts.on("-s", "--scheme SCHEME", "Metric namespace") { |v| options[:scheme] = v }
         opts.on("--verbose") { |v| options[:verbose] = true }
         opts.on("--version") { |v| options[:version] = v }
       end.order!(args)
