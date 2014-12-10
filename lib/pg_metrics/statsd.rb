@@ -28,9 +28,7 @@ module PgMetrics
 
       metrics.map! { |m| [m[0].join("."), m[1]] }
 
-      if options[:verbose]
-        STDOUT.puts %(#{metrics})
-      end
+      metrics.each { |m| STDOUT.puts m.join(" ") } if options[:verbose]
 
       metrics.each do |m|
         statsd.gauge(m[0], m[1])
