@@ -1,5 +1,16 @@
 # pg_metrics Changelog
 
+## Changes between 0.0.2 and 0.0.3
+
+### Improve formatting of verbose output
+
+0.0.3 prints each metric on its own line.
+
+### Permit using short -s flag to specify scheme
+
+0.0.3 allows you to specify scheme using `-s SCHEME` as well
+as the legacy `--scheme SCHEME`.
+
 ## Changes between 0.0.1 and 0.0.2
 
 ### Fix use of regexp filter
