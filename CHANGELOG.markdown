@@ -1,5 +1,14 @@
 # pg_metrics Changelog
 
+## Changes between 0.0.3 and 0.0.4
+
+### Allow specfication of which database stats are collected.
+
+Prior to 0.0.4, per-database stats were collected only from `pg_locks`,
+`pg_stat_user_tables` and `pg_statio_user_tables`. `pg_metrics_statsd`
+collects all stats by default, and allows specification of which stats
+to omit with a a variety of `--no-*` command line flags.
+
 ## Changes between 0.0.2 and 0.0.3
 
 ### Improve formatting of verbose output
