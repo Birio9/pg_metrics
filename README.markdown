@@ -21,6 +21,21 @@ To collect PostgreSQL database metrics for the `prod` database, include the
 
     pg_metrics_statsd --host localhost --port 8125 --connection "host=localhost port=5432" --dbname=prod
 
+By default, pg_metrics_statsd collects stats from  `pg_locks`,
+`pg_stat_user_functions` (where available), `pg_stat_user_tables`,
+`pg_stat_user_tables`, `pg_stat_user_indexes`, `pg_statio_user_indexes`,
+as well as per-table and per-index sizes. You can omit stats by supplying
+command line flags:
+
+ - `--no-functions`
+ - `--no-locks`
+ - `--no-table-stats`
+ - `--no-table-statio`
+ - `--no-index-stats`
+ - `--no-index-statio`
+ - `--no-table-sizes`
+ - `--no-index-sizes`
+
 ## Sensu
 
 `pg_metrics` can be used as a sensu-plugi. To collect PostgreSQL instance metrics

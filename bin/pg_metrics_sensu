@@ -8,9 +8,14 @@ end
 
 require 'sensu-plugin/metric/cli'
 require 'socket'
+require 'set'
 
 module PgMetrics
   class Sensu < Sensu::Plugin::Metric::CLI::Graphite
+
+    Stats = [Metrics::Locks,
+             Metrics::TableStatio,
+             Metrics::TableStats].to_set
 
     APPNAME = "pg_metrics_sensu"
 
@@ -42,7 +47,7 @@ module PgMetrics
       regexp = config[:exclude] ? Regexp.new(config[:exclude]) : nil
 
       metrics = if config[:dbname]
-                  Metrics::fetch_database_metrics(APPNAME, config[:conn], config[:dbname], regexp)
+                  Metrics::fetch_database_metrics(APPNAME, config[:conn], config[:dbname], Stats, regexp)
                 else
                   Metrics::fetch_instance_metrics(APPNAME, config[:conn], regexp)
                 end

@@ -1,7 +1,18 @@
 require "pg"
+require "set"
 
 module PgMetrics
   module Metrics
+
+    Functions = :functions
+    Locks = :locks
+    TableSizes = :table_size
+    IndexSizes = :index_size
+    TableStatio = :table_statio
+    TableStats = :table_stats
+    IndexStatio = :index_statio
+    IndexStats = :index_stats
+
     def self.fetch_instance_metrics(app_name, conn_info, regexp = nil)
       metrics = []
       conn = make_conn(conn_str(conn_info), app_name)
@@ -13,11 +24,10 @@ module PgMetrics
       filter_metrics(metrics, regexp)
     end
 
-    def self.fetch_database_metrics(app_name, conn_info, dbname, regexp = nil)
+    def self.fetch_database_metrics(app_name, conn_info, dbname, select_names, regexp = nil)
       metrics = []
       conn = make_conn(conn_str(conn_info, dbname), app_name)
       server_version = conn.parameter_status("server_version")
-      select_names = [:locks, :table_statio, :table_stats]
       select_metrics = database_metrics(server_version).select { |k, _v| select_names.include? k }
       select_metrics.values.each do |m|
         metrics += fetch_metrics(conn, ["database", dbname] + m[:prefix], m[:query])
@@ -193,7 +203,7 @@ module PgMetrics
 
     def self.database_metrics(server_version)
       {
-        functions: {
+        Functions => {
           prefix: %w(function),
           query: Gem::Version.new(server_version) >= Gem::Version.new('8.4') \
           ? %q{SELECT schemaname AS key,
@@ -222,7 +232,7 @@ array_to_string(ARRAY[funcname, '-', pronargs::TEXT,
           : nil
         },
 
-        locks: {
+        Locks => {
           prefix: %w(table),
           query: %q{SELECT nspname AS key,
                          CASE rel.relkind WHEN 'r' THEN rel.relname ELSE crel.relname END AS key2,
@@ -241,7 +251,7 @@ array_to_string(ARRAY[funcname, '-', pronargs::TEXT,
   GROUP BY 1, 2, 3, 4, 5, 6}
         },
 
-        table_size: {
+        TableSizes => {
           prefix: %w(table),
           query: %q{SELECT n.nspname AS key, r.relname AS key2,
               pg_relation_size(r.oid) AS size,
@@ -252,7 +262,7 @@ array_to_string(ARRAY[funcname, '-', pronargs::TEXT,
          AND n.nspname NOT IN ('pg_catalog', 'information_schema')}
         },
 
-        index_size: {
+        IndexSizes => {
           prefix: %w(table),
           query: %q{SELECT n.nspname AS key, cr.relname AS key2, 'index' AS key3,
               ci.relname AS key4, pg_relation_size(ci.oid) AS size
@@ -263,7 +273,7 @@ array_to_string(ARRAY[funcname, '-', pronargs::TEXT,
              AND n.nspname NOT IN ('pg_catalog', 'information_schema')}
         },
 
-        table_statio: {
+        TableStatio => {
           prefix: %w(table),
           query: %q{SELECT schemaname AS key, relname AS key2, 'statio' AS key3,
               nullif(heap_blks_read, 0) AS heap_blks_read,
@@ -277,7 +287,7 @@ array_to_string(ARRAY[funcname, '-', pronargs::TEXT,
        FROM pg_statio_user_tables}
         },
 
-        table_stats: {
+        TableStats => {
           prefix: %w(table),
           query: Gem::Version.new(server_version) >= Gem::Version.new('9.1') \
           ? %q{SELECT schemaname AS key, relname AS key2, 'stat' AS key3,
@@ -310,7 +320,7 @@ array_to_string(ARRAY[funcname, '-', pronargs::TEXT,
        FROM pg_stat_user_tables},
         },
 
-        index_statio: {
+        IndexStatio => {
           prefix: %w(table),
           query: %q{SELECT schemaname AS key, relname AS key2, 'index' AS key3,
                          indexrelname AS key4, 'statio' AS key5,
@@ -319,7 +329,7 @@ array_to_string(ARRAY[funcname, '-', pronargs::TEXT,
                     FROM pg_statio_user_indexes},
         },
 
-        index_stats: {
+        IndexStats => {
           prefix: %w(table),
           query: %q{SELECT schemaname AS key, relname AS key2, 'index' AS key3,
                          indexrelname AS key4, 'stat' AS key5,

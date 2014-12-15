@@ -1,4 +1,5 @@
 require "helper"
+require "set"
 
 module PgMetrics
   module Test
@@ -35,11 +36,58 @@ module PgMetrics
         assert_equal(config[:conn], "host=localhost port=5493")
       end
 
-
       def test_should_set_dbname
         args = %w(--dbname prod)
         config = PgMetrics::Statsd::parse(args)
         assert_equal(config[:dbname], "prod")
+      end
+
+      def test_should_set_all_metrics
+        args = []
+        config = PgMetrics::Statsd::parse(args)
+        expected = [PgMetrics::Metrics::Functions,
+                    PgMetrics::Metrics::Locks,
+                    PgMetrics::Metrics::TableSizes,
+                    PgMetrics::Metrics::IndexSizes,
+                    PgMetrics::Metrics::TableStatio,
+                    PgMetrics::Metrics::TableStats,
+                    PgMetrics::Metrics::IndexStatio,
+                    PgMetrics::Metrics::IndexStats].to_set
+        assert_equal(config[:dbstats], expected)
+      end
+
+      def test_should_set_all_metrics_with_positive_locks
+        args = %w(--locks)
+        config = PgMetrics::Statsd::parse(args)
+        expected = [PgMetrics::Metrics::Functions,
+                    PgMetrics::Metrics::Locks,
+                    PgMetrics::Metrics::TableSizes,
+                    PgMetrics::Metrics::IndexSizes,
+                    PgMetrics::Metrics::TableStatio,
+                    PgMetrics::Metrics::TableStats,
+                    PgMetrics::Metrics::IndexStatio,
+                    PgMetrics::Metrics::IndexStats].to_set
+        assert_equal(config[:dbstats], expected)
+      end
+
+      def test_should_not_collect_locks
+        args = %w(--no-locks)
+        config = PgMetrics::Statsd::parse(args)
+        expected = [PgMetrics::Metrics::Functions,
+                    PgMetrics::Metrics::TableSizes,
+                    PgMetrics::Metrics::IndexSizes,
+                    PgMetrics::Metrics::TableStatio,
+                    PgMetrics::Metrics::TableStats,
+                    PgMetrics::Metrics::IndexStatio,
+                    PgMetrics::Metrics::IndexStats].to_set
+        assert_equal(config[:dbstats], expected)
+      end
+
+      def test_should_remove_all_but_locks
+        args = %w(--no-functions --no-table-sizes --no-index-sizes --no-table-statio --no-table-stats --no-index-stats --no-index-statio)
+        config = PgMetrics::Statsd::parse(args)
+        expected = [PgMetrics::Metrics::Locks].to_set
+        assert_equal(config[:dbstats], expected)
       end
 
     end
