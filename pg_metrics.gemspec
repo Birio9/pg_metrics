@@ -7,7 +7,7 @@ Gem::Specification.new do |spec|
   spec.name = "pg_metrics"
   spec.version = PgMetrics::VERSION
   spec.licenses = %w(MIT)
-  spec.date = "2014-12-15"
+  spec.date = "2014-12-16"
   spec.summary = "pg_metrics"
   spec.description = "PostgreSQL Metrics"
   spec.authors = ["Michael Glaesemann"]
