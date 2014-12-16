@@ -192,11 +192,11 @@ module PgMetrics
 
         xlog: {
           prefix: %w(xlog),
-          query: Gem::Version.new(server_version) >= Gem::Version.new('9.1') \
+          query: Gem::Version.new(server_version) >= Gem::Version.new('9.0') \
           ? %q{SELECT CASE WHEN pg_is_in_recovery() THEN NULL ELSE pg_current_xlog_location() END AS location,
                 pg_last_xlog_receive_location() AS receive_location,
                 pg_last_xlog_replay_location() AS replay_location}
-          : nil
+          : %q{SELECT pg_current_xlog_location() AS location}
         }
       }
     end
