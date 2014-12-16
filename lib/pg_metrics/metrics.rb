@@ -141,16 +141,19 @@ module PgMetrics
         sessions: {
           prefix: %w(sessions),
           query: Gem::Version.new(server_version) >= Gem::Version.new('9.2') \
-          ? %{SELECT datname AS key, usename AS key2, state AS key3, count(*) AS value
+          ? %{SELECT datname AS key, usename AS key2,
+                     CASE WHEN waiting THEN 'waiting' ELSE state END AS key3,
+                     count(*) AS value
               FROM pg_stat_activity
-              WHERE pid <> pg_backend_pid() GROUP BY datname, usename, state}
-          : %{SELECT datname AS key, usename,
-                   CASE current_query
-                     WHEN NULL THEN 'disabled'
-                     WHEN '<IDLE>' THEN 'idle'
-                     WHEN '<IDLE> in transaction' THEN 'idle in transaction'
-                     ELSE 'active' END,
-               count(*) AS value
+              WHERE pid <> pg_backend_pid() GROUP BY datname, usename, 3}
+          : %{SELECT datname AS key, usename AS key2,
+                CASE WHEN waiting THEN 'waiting'
+                     ELSE CASE current_query
+                               WHEN NULL THEN 'disabled'
+                               WHEN '<IDLE>' THEN 'idle'
+                               WHEN '<IDLE> in transaction' THEN 'idle in transaction'
+                               ELSE 'active' END END AS key3,
+                count(*) AS value
             FROM pg_stat_activity
             WHERE procpid <> pg_backend_pid() GROUP BY datname, usename, 3}
         },
