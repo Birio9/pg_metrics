@@ -36,6 +36,13 @@ command line flags:
  - `--no-table-sizes`
  - `--no-index-sizes`
 
+### pgbouncer metrics
+
+`pg_metrics` can also collect `pgbouncer` metrics by passing the `--pgbouncer`
+flag.
+
+    pg_metrics_statsd --host localhost --port 8125 --connection "host=localhost port=6432" --pgbouncer
+
 ## Sensu
 
 `pg_metrics` can be used as a sensu-plugi. To collect PostgreSQL instance metrics

@@ -15,14 +15,18 @@ module PgMetrics
         return 0
       end
 
-      regexp = options[:exclude] ? options[:exclude] : nil
+      if options[:pgbouncer]
+        metrics = PgMetrics::PgbouncerMetrics::fetch_pgbouncer_metrics(APPNAME, options[:conn])
+      else
+        regexp = options[:exclude] ? options[:exclude] : nil
 
-      metrics = if options[:dbname]
-                  PgMetrics::Metrics::fetch_database_metrics(APPNAME, options[:conn], options[:dbname],
-                                                             options[:dbstats], regexp)
-                else
-                  PgMetrics::Metrics::fetch_instance_metrics(APPNAME, options[:conn], regexp)
-                end
+        metrics = if options[:dbname]
+                    PgMetrics::Metrics::fetch_database_metrics(APPNAME, options[:conn], options[:dbname],
+                                                               options[:dbstats], regexp)
+                  else
+                    PgMetrics::Metrics::fetch_instance_metrics(APPNAME, options[:conn], regexp)
+                  end
+      end
 
       statsd = ::Statsd.new(options[:host], options[:port]).tap do |sd|
         sd.namespace = options[:scheme]
@@ -70,6 +74,7 @@ module PgMetrics
         opts.on("--[no-]table-stats", "Collect database table stats ") { |v| options[:dbstats].delete(PgMetrics::Metrics::TableStats) unless v }
         opts.on("--[no-]index-statio", "Collect database index statio stats ") { |v| options[:dbstats].delete(PgMetrics::Metrics::IndexStatio) unless v }
         opts.on("--[no-]index-stats", "Collect database index stats ") { |v| options[:dbstats].delete(PgMetrics::Metrics::IndexStats) unless v }
+        opts.on("--pgbouncer", "Collect pgbouncer stats") { |v| options[:pgbouncer] = true }
         opts.on("--verbose") { |v| options[:verbose] = true }
         opts.on("--version") { |v| options[:version] = v }
       end.order!(args)
