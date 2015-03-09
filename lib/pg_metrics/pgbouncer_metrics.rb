@@ -73,9 +73,9 @@ module PgMetrics
 
     def self.extract_backend_metrics(database_results, pool_results)
       databases = database_results.inject({}) do |memo, tup|
-        user = tup["force_user"].nil? ? "SAMEUSER" : tup["force_user"]
+        user = tup["force_user"].nil? ? :sameuser : tup["force_user"]
         host = tup["host"].nil? ? "localhost" : tup["host"]
-        memo[tup["name"]] = [host, tup["port"], tup["database"], user]
+        memo[tup["name"]] = {:host => host, :port => tup["port"], :database => tup["database"], :user => user}
         memo
       end
 
@@ -83,7 +83,10 @@ module PgMetrics
       max_cols = %w(max_wait)
       cols = sum_cols.concat(max_cols)
       sums = pool_results.inject({}) do |memo, tup|
-        key = databases[tup["database"]]
+        database = databases[tup["database"]]
+        next memo if database.nil?
+        user = database[:user] === :sameuser ? tup["user"] : database[:user]
+        key = [database[:host], database[:port], database[:database], user]
         vals = memo[key] || {
           "cl_active" => 0,
           "cl_waiting" => 0,
