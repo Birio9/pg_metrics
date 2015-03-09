@@ -1,5 +1,28 @@
 # pg_metrics Changelog
 
+## Changes between 0.0.7
+
+### Use client connection user in backend stats
+
+In 0.0.5, backend-stats for automatic connections or non-force-user database
+definitions used `SAMEUSER` as the username for the backend connection. The
+actual client connection user is now used instead.
+
+### Drop backend stats for pools with no corresponding backend
+
+`pgbouncer` sometimes shows databases in `SHOW pools` that have no
+corresponding entry in `SHOW databases`. These pool entries are
+now ignored for backend stats.
+
+## Changes between 0.0.5 and 0.0.6
+
+### Add pgbouncer stats
+
+`pg_metrics` can now be used to collect pgbouncer stats using the `--pgbouncer`
+flag. Only results of `SHOW stats` and `SHOW pools` are collected, as well
+as per-backend stats, which uses the results of `SHOW databases` to aggregate
+pool stats per backend-connection, not just per defined database connection.
+
 ## Changes between 0.0.4 and 0.0.5
 
 ### Collect waiting session stats
