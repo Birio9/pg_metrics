@@ -21,14 +21,13 @@ Gem::Specification.new do |spec|
                         "README.markdown",
                         "pg_metrics.gemspec",
                         "rakefile"].to_a
-  spec.executables = %w(pg_metrics_statsd pg_metrics_sensu)
+  spec.executables = %w(pg_metrics_statsd)
   spec.require_path = %(lib)
   spec.test_files = FileList["test/**/*.*"].to_a
   spec.extra_rdoc_files = %w(LICENSE README.markdown)
   spec.homepage = "http://rubygems.org/gems/pg_metrics"
   [["pg", ["~> 0.10"]],
-   ["statsd-ruby", ["~> 1.2", ">= 1.2.1"]],
-   ["sensu-plugin", ["~> 1.1"]]].each do |dep|
+   ["statsd-ruby", ["~> 1.2", ">= 1.2.1"]]].each do |dep|
     spec.add_runtime_dependency(*dep)
   end
 

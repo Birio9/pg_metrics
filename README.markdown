@@ -1,12 +1,12 @@
 # pg_metrics PostgreSQL Metrics
 
-`pg_metrics` is a PostgreSQL metrics collector for use with statsd and sensu.
+`pg_metrics` is a PostgreSQL metrics collector for use with statsd.
 
 ## Installation
 
     gem install pg_metrics
 
-The `pg_metrics_statsd` and `pg_metrics_sensu` commands are now available.
+The `pg_metrics_statsd` command is now available.
 
 
 ## Statsd
@@ -42,18 +42,3 @@ command line flags:
 flag.
 
     pg_metrics_statsd --host localhost --port 8125 --connection "host=localhost port=6432" --pgbouncer
-
-## Sensu
-
-`pg_metrics` can be used as a sensu-plugi. To collect PostgreSQL instance metrics
-on localhost port 5432:
-
-    pg_metrics_sensu --connection "host=localhost port=5432"
-
-To collect PostgreSQL database metrics for the `prod` database:
-
-    pg_metrics_sensu --connection "host=localhost port=5432" --dbname=prod
-
-Note that the number of metrics returned by `pg_metrics` can overwhelm sensu
-depending on the sampling frequency. This is actually the reason we created
-the statsd implementation.

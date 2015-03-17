@@ -2,13 +2,8 @@ GEM
   remote: http://rubygems.org/
   specs:
     docile (1.1.5)
-    json (1.8.1)
-    mixlib-cli (1.5.0)
     multi_json (1.10.1)
     pg (0.17.1)
-    sensu-plugin (1.1.0)
-      json
-      mixlib-cli (>= 1.1.0)
     simplecov (0.9.1)
       docile (~> 1.1.0)
       multi_json (~> 1.0)
@@ -21,6 +16,5 @@ PLATFORMS
 
 DEPENDENCIES
   pg
-  sensu-plugin
   simplecov
   statsd-ruby
