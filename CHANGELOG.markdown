@@ -1,6 +1,18 @@
 # pg_metrics Changelog
 
-## Changes between 0.0.7
+## Changes between 0.1.1 and 0.0.7
+
+### Remove sensu
+
+pg_metrics generates too many stats for sensu to cope with, which
+is why we made the statsd version in the first place. As we're not
+using or testing the sensu version, remove it rather than let it bitrot.
+
+### Update project homepage
+
+Make the project public (yay!), making github.com the official homepage.
+
+## Changes between 0.0.7 and 0.0.6
 
 ### Use client connection user in backend stats
 

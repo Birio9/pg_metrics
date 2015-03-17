@@ -25,7 +25,7 @@ Gem::Specification.new do |spec|
   spec.require_path = %(lib)
   spec.test_files = FileList["test/**/*.*"].to_a
   spec.extra_rdoc_files = %w(LICENSE README.markdown)
-  spec.homepage = "http://rubygems.org/gems/pg_metrics"
+  spec.homepage = "https://github.com/MeetMe/pg_metrics"
   [["pg", ["~> 0.10"]],
    ["statsd-ruby", ["~> 1.2", ">= 1.2.1"]]].each do |dep|
     spec.add_runtime_dependency(*dep)
