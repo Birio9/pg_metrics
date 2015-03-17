@@ -8,8 +8,7 @@
 
 The `pg_metrics_statsd` command is now available.
 
-
-## Statsd
+## Usage
 
 To collect PostgreSQL instance metrics on localhost port 5432 and pass them to a
 statsd instance running on localhost port 8125:
