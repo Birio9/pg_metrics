@@ -44,20 +44,23 @@ module PgMetrics
     end
 
     def self.parse(args)
+      default_stats = [PgMetrics::Metrics::Functions,
+                       PgMetrics::Metrics::Locks,
+                       PgMetrics::Metrics::TableSizes,
+                       PgMetrics::Metrics::IndexSizes,
+                       PgMetrics::Metrics::TableStatio,
+                       PgMetrics::Metrics::TableStats,
+                       PgMetrics::Metrics::IndexStatio,
+                       PgMetrics::Metrics::IndexStats].to_set
       options = {
         host: "localhost",
         port: 8125,
         conn: "",
         scheme: %(#{Socket.gethostname}.postgresql),
-        dbstats: [PgMetrics::Metrics::Functions,
-                  PgMetrics::Metrics::Locks,
-                  PgMetrics::Metrics::TableSizes,
-                  PgMetrics::Metrics::IndexSizes,
-                  PgMetrics::Metrics::TableStatio,
-                  PgMetrics::Metrics::TableStats,
-                  PgMetrics::Metrics::IndexStatio,
-                  PgMetrics::Metrics::IndexStats].to_set
+        dbstats: Set.new
       }
+
+      stats = { added: Set.new, default: default_stats }
 
       OptionParser.new do |opts|
         opts.on("-h", "--host STATSD_HOST", "StatsD host") { |v| options[:host] = v }
@@ -66,20 +69,34 @@ module PgMetrics
         opts.on("-d", "--dbname DBNAME", "PostgreSQL database name for database metrics") { |v| options[:dbname] = v }
         opts.on("-e", "--exclude REGEXP", "Exclude objects matching given regexp") { |v| options[:exclude] = ::Regexp.new(v) }
         opts.on("-s", "--scheme SCHEME", "Metric namespace") { |v| options[:scheme] = v }
-        opts.on("--[no-]functions", "Collect database function stats") { |v| options[:dbstats].delete(PgMetrics::Metrics::Functions) unless v }
-        opts.on("--[no-]locks", "Collect database lock stats") { |v| options[:dbstats].delete(PgMetrics::Metrics::Locks) unless v }
-        opts.on("--[no-]table-sizes", "Collect database table size stats ") { |v| options[:dbstats].delete(PgMetrics::Metrics::TableSizes) unless v }
-        opts.on("--[no-]index-sizes", "Collect database index size stats ") { |v| options[:dbstats].delete(PgMetrics::Metrics::IndexSizes) unless v }
-        opts.on("--[no-]table-statio", "Collect database table statio stats ") { |v| options[:dbstats].delete(PgMetrics::Metrics::TableStatio) unless v }
-        opts.on("--[no-]table-stats", "Collect database table stats ") { |v| options[:dbstats].delete(PgMetrics::Metrics::TableStats) unless v }
-        opts.on("--[no-]index-statio", "Collect database index statio stats ") { |v| options[:dbstats].delete(PgMetrics::Metrics::IndexStatio) unless v }
-        opts.on("--[no-]index-stats", "Collect database index stats ") { |v| options[:dbstats].delete(PgMetrics::Metrics::IndexStats) unless v }
+        opts.on("--only", "Collect only specified stats") { |v| stats[:default] = Set.new }
+        opts.on("--[no-]functions", "Collect database function stats") { |v| stats = mutate_stats(stats, PgMetrics::Metrics::Functions, v) }
+        opts.on("--[no-]locks", "Collect database lock stats") { |v| stats = mutate_stats(stats, PgMetrics::Metrics::Locks, v) }
+        opts.on("--[no-]table-sizes", "Collect database table size stats") { |v| stats = mutate_stats(stats, PgMetrics::Metrics::TableSizes, v) }
+        opts.on("--[no-]index-sizes", "Collect database index size stats") { |v| stats = mutate_stats(stats, PgMetrics::Metrics::IndexSizes, v) }
+        opts.on("--[no-]table-statio", "Collect database table statio stats") { |v| stats = mutate_stats(stats, PgMetrics::Metrics::TableStatio, v) }
+        opts.on("--[no-]table-stats", "Collect database table stats") { |v| stats = mutate_stats(stats, PgMetrics::Metrics::TableStats, v) }
+        opts.on("--[no-]index-statio", "Collect database index statio stats") { |v| stats = mutate_stats(stats, PgMetrics::Metrics::IndexStatio, v) }
+        opts.on("--[no-]index-stats", "Collect database index stats") { |v| stats = mutate_stats(stats, PgMetrics::Metrics::IndexStats, v) }
+        opts.on("--[no-]table-free-space", "Collect database table free space stats (requires pg_freespacemap)") { |v| stats = mutate_stats(stats, PgMetrics::Metrics::TableFreeSpace, v) }
+        opts.on("--[no-]index-ideal-sizes", "Collect database index ideal size estimates") { |v| stats = mutate_stats(stats, PgMetrics::Metrics::IndexIdealSizes, v) }
         opts.on("--pgbouncer", "Collect pgbouncer stats") { |v| options[:pgbouncer] = true }
         opts.on("--verbose") { |v| options[:verbose] = true }
         opts.on("--version") { |v| options[:version] = v }
       end.order!(args)
 
+      options[:dbstats] = stats[:added].merge(stats[:default])
       options
     end
+
+    def self.mutate_stats(stats, key, do_add)
+      if do_add
+        stats[:added].add(key)
+      else
+        stats[:default].delete(key)
+      end
+      stats
+    end
+
   end
 end

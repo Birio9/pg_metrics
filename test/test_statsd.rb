@@ -53,7 +53,7 @@ module PgMetrics
                     PgMetrics::Metrics::TableStats,
                     PgMetrics::Metrics::IndexStatio,
                     PgMetrics::Metrics::IndexStats].to_set
-        assert_equal(config[:dbstats], expected)
+        assert_equal(expected, config[:dbstats])
       end
 
       def test_should_set_all_metrics_with_positive_locks
@@ -67,7 +67,7 @@ module PgMetrics
                     PgMetrics::Metrics::TableStats,
                     PgMetrics::Metrics::IndexStatio,
                     PgMetrics::Metrics::IndexStats].to_set
-        assert_equal(config[:dbstats], expected)
+        assert_equal(expected, config[:dbstats])
       end
 
       def test_should_not_collect_locks
@@ -80,14 +80,36 @@ module PgMetrics
                     PgMetrics::Metrics::TableStats,
                     PgMetrics::Metrics::IndexStatio,
                     PgMetrics::Metrics::IndexStats].to_set
-        assert_equal(config[:dbstats], expected)
+        assert_equal(expected, config[:dbstats])
       end
 
       def test_should_remove_all_but_locks
         args = %w(--no-functions --no-table-sizes --no-index-sizes --no-table-statio --no-table-stats --no-index-stats --no-index-statio)
         config = PgMetrics::Statsd::parse(args)
         expected = [PgMetrics::Metrics::Locks].to_set
-        assert_equal(config[:dbstats], expected)
+        assert_equal(expected, config[:dbstats])
+      end
+
+      def test_should_removal_all_but_locks_using_only
+        args = %w(--only --locks)
+        config = PgMetrics::Statsd::parse(args)
+        expected = [PgMetrics::Metrics::Locks].to_set
+        assert_equal(expected, config[:dbstats])
+      end
+
+      def test_should_only_include_table_free_space
+        args = %w(--only --table-free-space)
+        config = PgMetrics::Statsd::parse(args)
+        expected = [PgMetrics::Metrics::TableFreeSpace].to_set
+        assert_equal(expected, config[:dbstats])
+      end
+
+      def test_should_only_include_table_free_space
+        args = %w(--only --index-ideal-sizes --table-free-space)
+        config = PgMetrics::Statsd::parse(args)
+        expected = [PgMetrics::Metrics::TableFreeSpace,
+                    PgMetrics::Metrics::IndexIdealSizes].to_set
+        assert_equal(expected, config[:dbstats])
       end
 
     end

@@ -12,6 +12,8 @@ module PgMetrics
     TableStats = :table_stats
     IndexStatio = :index_statio
     IndexStats = :index_stats
+    TableFreeSpace = :table_free_space
+    IndexIdealSizes = :index_ideal_size
 
     def self.fetch_instance_metrics(app_name, conn_info, regexp = nil)
       metrics = []
@@ -231,7 +233,7 @@ array_to_string(ARRAY[funcname, '-', pronargs::TEXT,
                       calls, total_time, self_time
           FROM pg_stat_user_functions
           JOIN pg_proc ON pg_proc.oid = funcid
-          WHERE schemaname NOT IN ('information_schema', 'pg_catalog')) AS funcs}
+          WHERE schemaname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')) AS funcs}
           : nil
         },
 
@@ -262,7 +264,29 @@ array_to_string(ARRAY[funcname, '-', pronargs::TEXT,
        FROM pg_class r
        JOIN pg_namespace n ON r.relnamespace = n.oid
        WHERE r.relkind = 'r'
-         AND n.nspname NOT IN ('pg_catalog', 'information_schema')}
+         AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')}
+        },
+
+        TableFreeSpace => {
+          prefix: %w(table),
+          query: Gem::Version.new(server_version) >= Gem::Version.new('8.4') \
+          ? %{SELECT n.nspname AS key, t.relname AS key2,
+                     COALESCE((SELECT sum(pg_freespace.avail) AS sum
+                                 FROM pg_freespace(t.oid::regclass) AS pg_freespace(blkno, avail)), 0::bigint) AS free_space
+                FROM pg_class t
+                JOIN pg_namespace n ON t.relnamespace = n.oid
+                WHERE t.relkind = 'r'::"char"
+                      AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')}
+          : %{SELECT n.nspname AS key, t.relname AS key2, fsm.bytes AS free_space
+                FROM pg_class t
+                JOIN pg_namespace n ON t.relnamespace = n.oid
+                LEFT JOIN (SELECT fsm.relfilenode, sum(fsm.bytes) AS bytes
+                             FROM pg_freespacemap_pages fsm
+                             JOIN pg_database db ON db.oid = fsm.reldatabase
+                                                    AND db.datname = current_database()
+                             GROUP BY fsm.relfilenode) fsm ON t.relfilenode = fsm.relfilenode
+                WHERE t.relkind = 'r'::"char"
+                      AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')}
         },
 
         IndexSizes => {
@@ -273,7 +297,60 @@ array_to_string(ARRAY[funcname, '-', pronargs::TEXT,
        JOIN pg_class cr ON cr.oid = i.indrelid
        JOIN pg_namespace n on ci.relnamespace = n.oid
        WHERE ci.relkind = 'i' AND cr.relkind = 'r'
-             AND n.nspname NOT IN ('pg_catalog', 'information_schema')}
+             AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')}
+        },
+
+        IndexIdealSizes => {
+          prefix: %w(table),
+          query: %{SELECT pg_namespace.nspname AS key, rel.relname AS key2,
+       'index' AS key3, idx.relname AS key4,
+       ((ceil(idx.reltuples * ((constants.index_tuple_header_size
+                                  + constants.item_id_data_size
+                                  + CASE WHEN (COALESCE(sum(CASE WHEN statts.staattnotnull THEN 0 ELSE 1 END), 0::bigint)
+                                               + ((SELECT COALESCE(sum(CASE WHEN atts.attnotnull THEN 0 ELSE 1 END), 0::bigint) AS "coalesce"
+                                                     FROM pg_attribute atts
+                                                     JOIN (SELECT pg_index.indkey[the.i] AS attnum
+                                                             FROM generate_series(0, pg_index.indnatts - 1) the(i)) cols ON atts.attnum = cols.attnum
+                                                             WHERE atts.attrelid = pg_index.indrelid))) > 0
+                                         THEN (SELECT the.null_bitmap_size
+                                                        + constants.max_align
+                                                        - CASE WHEN (the.null_bitmap_size % constants.max_align) = 0
+                                                                 THEN constants.max_align
+                                                               ELSE the.null_bitmap_size % constants.max_align END
+                                                 FROM (VALUES (ceil(pg_index.indnatts::real / 8)::int)) the (null_bitmap_size))
+                                         ELSE 0 END)::double precision
+                                 + COALESCE(sum(statts.stawidth::double precision * (1::double precision - statts.stanullfrac)), 0::double precision)
+                                 + COALESCE((SELECT sum(atts.stawidth::double precision * (1::double precision - atts.stanullfrac)) AS sum
+                                               FROM pg_statistic atts
+                                               JOIN (SELECT pg_index.indkey[the.i] AS attnum
+                                                       FROM generate_series(0, pg_index.indnatts - 1) the(i)) cols ON atts.staattnum = cols.attnum
+                                               WHERE atts.starelid = pg_index.indrelid), 0::double precision))
+                            / (constants.block_size - constants.page_header_data_size::numeric - constants.special_space::numeric)::double precision)
+           + constants.index_metadata_pages::double precision)
+          * constants.block_size::double precision)::bigint AS ideal_size
+  FROM pg_index
+  JOIN pg_class idx ON pg_index.indexrelid = idx.oid
+  JOIN pg_class rel ON pg_index.indrelid = rel.oid
+  JOIN pg_namespace ON idx.relnamespace = pg_namespace.oid
+  LEFT JOIN (SELECT pg_statistic.starelid, pg_statistic.staattnum, pg_statistic.stanullfrac, pg_statistic.stawidth, pg_attribute.attnotnull AS staattnotnull
+               FROM pg_statistic
+               JOIN pg_attribute ON (pg_statistic.starelid,pg_statistic.staattnum) = (pg_attribute.attrelid, pg_attribute.attnum)) statts
+    ON statts.starelid = idx.oid
+  CROSS JOIN (SELECT current_setting('block_size'::text)::numeric AS block_size,
+                      CASE WHEN "substring"(version(), 12, 3) = ANY (ARRAY['8.0'::text, '8.1'::text, '8.2'::text]) THEN 27
+                           ELSE 23 END AS tuple_header_size,
+                      CASE WHEN version() ~ 'mingw32'::text THEN 8 ELSE 4 END AS max_align,
+                      8 AS index_tuple_header_size,
+                      4 AS item_id_data_size,
+                      24 AS page_header_data_size,
+                      0 AS special_space,
+                      1 AS index_metadata_pages) AS constants
+  WHERE nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+  GROUP BY pg_namespace.nspname, rel.relname, rel.oid, idx.relname, idx.reltuples, idx.relpages, pg_index.indexrelid,
+           pg_index.indrelid, pg_index.indkey, pg_index.indnatts,
+           constants.block_size, constants.tuple_header_size, constants.max_align,
+           constants.index_tuple_header_size, constants.item_id_data_size, constants.page_header_data_size,
+           constants.index_metadata_pages, constants.special_space;}
         },
 
         TableStatio => {
