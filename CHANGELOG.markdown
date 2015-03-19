@@ -1,5 +1,19 @@
 # pg_metrics Changelog
 
+## Changes between 0.1.1 and 0.2.0
+
+### Add --table-free-space and --index-ideal-size options
+
+With `--table-free-space`, pg_metrics collects free space stats
+(provided `pg_freespacemap` is installed). With `--index-ideal-sizes`,
+`pg_metrics` estimates how large an index *should* be, assuming it has
+no dead tuples. Both of these options are not included by default.
+
+Motivated by the fact that `pg_freespace` in postgres versions 8.4
+and up is quite slow and we don't want to run it as frequently as
+other metrics, add an `--only` option that runs only the options
+explicitly specified.
+
 ## Changes between 0.1.1 and 0.0.7
 
 ### Remove sensu
